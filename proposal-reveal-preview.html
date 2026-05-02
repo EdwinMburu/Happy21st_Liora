@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal Reveal Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-1: #0a0a1a;
+    --bg-2: #15153a;
+    --bg-3: #230b2f;
+    --pink: #ff69b4;
+    --pink-soft: #ffb6d8;
+    --gold: #ffd37a;
+    --text: #ffffff;
+    --muted: #f8dff0;
+    --glass: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 182, 216, 0.38);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text);
+    background: radial-gradient(1100px 700px at 92% -10%, rgba(255, 105, 180, 0.16) 0%, transparent 62%),
+                radial-gradient(900px 620px at 5% 100%, rgba(130, 96, 255, 0.12) 0%, transparent 56%),
+                linear-gradient(135deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+    overflow-x: hidden;
+}
+
+.sky {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.sky::before,
+.sky::after {
+    content: "";
+    position: absolute;
+    width: 140vmax;
+    height: 140vmax;
+    border-radius: 45%;
+    opacity: 0.1;
+    filter: blur(2px);
+    animation: drift 28s linear infinite;
+}
+
+.sky::before {
+    background: radial-gradient(circle at 30% 30%, rgba(255, 214, 127, 0.55) 0%, transparent 58%);
+    top: -88vmax;
+    left: -20vmax;
+}
+
+.sky::after {
+    background: radial-gradient(circle at 70% 70%, rgba(255, 138, 204, 0.45) 0%, transparent 57%);
+    bottom: -88vmax;
+    right: -18vmax;
+    animation-direction: reverse;
+}
+
+main {
+    position: relative;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.reveal-card {
+    position: relative;
+    width: min(920px, 100%);
+    padding: clamp(22px, 4vw, 38px);
+    border-radius: 28px;
+    border: 1px solid var(--border);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+    backdrop-filter: blur(4px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+}
+
+.reveal-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: conic-gradient(from 170deg, transparent 0 22%, rgba(255, 212, 136, 0.6), transparent 38% 68%, rgba(255, 105, 180, 0.45), transparent 82% 100%);
+    filter: blur(8px);
+    z-index: -1;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 182, 216, 0.38);
+    font-size: 0.84rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 7px rgba(240, 200, 121, 0.2);
+    animation: pulse 1.8s infinite;
+}
+
+h1 {
+    margin: 18px 0 8px;
+    font-family: 'Great Vibes', cursive;
+    font-size: clamp(1.75rem, 4vw, 3.05rem);
+    line-height: 1.18;
+    font-weight: 400;
+}
+
+.subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: clamp(1rem, 2.6vw, 1.22rem);
+}
+
+.grid {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+}
+
+.story {
+    border: 1px solid rgba(255, 182, 216, 0.3);
+    border-radius: 20px;
+    background: rgba(14, 14, 34, 0.38);
+    padding: 18px;
+}
+
+.story p {
+    margin: 0;
+    color: #f8e8f7;
+    line-height: 1.75;
+    font-size: clamp(0.98rem, 2.4vw, 1.08rem);
+}
+
+.story p + p {
+    margin-top: 12px;
+}
+
+.keyline {
+    background: linear-gradient(90deg, rgba(255, 105, 180, 0.24), rgba(255, 211, 122, 0.1));
+    border-left: 3px solid var(--pink);
+    padding: 10px 12px;
+    border-radius: 12px;
+}
+
+.ring-stage {
+    position: relative;
+    min-height: 280px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 182, 216, 0.3);
+    background:
+        radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.1), transparent 55%),
+        linear-gradient(170deg, rgba(39, 17, 52, 0.5), rgba(20, 22, 60, 0.5));
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    overflow: hidden;
+}
+
+.ring {
+    position: relative;
+    font-size: clamp(3rem, 8vw, 4.8rem);
+    transform: translateY(0) rotate(-8deg);
+    animation: floatRing 3s ease-in-out infinite;
+    filter: drop-shadow(0 6px 10px rgba(255, 176, 211, 0.22));
+}
+
+.ring::before,
+.ring::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 211, 122, 0.5);
+    animation: ripple 2.4s ease-out infinite;
+}
+
+.ring::before {
+    width: 110px;
+    height: 110px;
+}
+
+.ring::after {
+    width: 160px;
+    height: 160px;
+    animation-delay: 1.2s;
+}
+
+.cta-row {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.btn {
+    border: none;
+    border-radius: 999px;
+    padding: 12px 22px;
+    font-family: inherit;
+    font-size: 0.98rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-yes {
+    color: #2f1c00;
+    background: linear-gradient(135deg, #ffd37a, #ff9ccf 48%, #ff69b4);
+    box-shadow: 0 4px 10px rgba(255, 105, 180, 0.2);
+}
+
+.result {
+    margin-top: 14px;
+    min-height: 32px;
+    color: #ffe8a7;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.footer-note {
+    margin-top: 16px;
+    color: var(--pink-soft);
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.spark {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+@keyframes drift {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes floatRing {
+    0%, 100% { transform: translateY(0) rotate(-8deg); }
+    50% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+@keyframes ripple {
+    0% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(0.72);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.42);
+    }
+}
+
+@media (max-width: 760px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reveal-card {
+        border-radius: 22px;
+        padding: 18px;
+    }
+
+    .ring-stage {
+        min-height: 230px;
+    }
+}
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+
+<main>
+    <section class="reveal-card" id="proposalCard">
+        <div class="badge"><span class="badge-dot"></span> Final Reveal Sequence</div>
+        <h1>Forever Starts Now</h1>
+        <p class="subtitle">Simple, honest, and straight from my heart.</p>
+
+        <div class="grid">
+            <article class="story">
+                <p>Shee, I love you deeply, and I am serious about us.</p>
+                <p class="keyline">I do not want to hide behind long words. I want you to know exactly what I mean.</p>
+                <p>The moment I see you in person, I will ask you this question:</p>
+                <p style="font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; color: #ffe3ad; margin-top: 14px; font-weight: 700;">Will you build forever with me?</p>
+
+                <div class="cta-row">
+                    <button class="btn btn-yes" id="yesBtn">Yes, Forever</button>
+                </div>
+
+                <div class="result" id="resultText" aria-live="polite"></div>
+                <div class="footer-note">Preview file only. Integration into your main page can come next.</div>
+            </article>
+
+            <aside class="ring-stage" id="ringStage">
+                <div class="ring" aria-hidden="true">💍</div>
+            </aside>
+        </div>
+    </section>
+</main>
+
+<script>
+const resultText = document.getElementById('resultText');
+const ringStage = document.getElementById('ringStage');
+
+function makeSpark(x, y) {
+    const spark = document.createElement('span');
+    spark.className = 'spark';
+    const hue = 36 + Math.random() * 26;
+    spark.style.background = `hsl(${hue} 95% 74%)`;
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    spark.style.opacity = '1';
+    ringStage.appendChild(spark);
+
+    const dx = (Math.random() - 0.5) * 180;
+    const dy = -40 - Math.random() * 130;
+    const scale = 0.6 + Math.random() * 0.8;
+
+    spark.animate([
+        { transform: 'translate(-50%, -50%) scale(0.45)', opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${scale})`, opacity: 0 }
+    ], {
+        duration: 850 + Math.random() * 450,
+        easing: 'cubic-bezier(.22,.7,.26,1)'
+    });
+
+    setTimeout(() => spark.remove(), 1350);
+}
+
+function sparkleBurst() {
+    const rect = ringStage.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    for (let i = 0; i < 24; i++) {
+        makeSpark(cx, cy);
+    }
+}
+
+document.getElementById('yesBtn').addEventListener('click', () => {
+    resultText.textContent = 'Thank you, my love. I will ask you properly the moment I see you.';
+    sparkleBurst();
+});
+</script>
+</body>
+</html>

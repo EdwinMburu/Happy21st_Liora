@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For My Shee ❤️</title>
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body{
+      background: linear-gradient(135deg, #ff4d6d, #ff8fab, #ffc2d1);
+      color: white;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container{
+      max-width: 900px;
+      margin: auto;
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    h1{
+      font-size: 2.8rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    h2{
+      font-size: 1.3rem;
+      font-weight: 300;
+      margin-bottom: 25px;
+      opacity: 0.95;
+    }
+
+    .card{
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 25px;
+      margin: 20px 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      backdrop-filter: blur(8px);
+    }
+
+    .love-letter{
+      font-size: 1.1rem;
+      line-height: 1.9;
+      text-align: left;
+    }
+
+    .love-letter span{
+      font-weight: bold;
+      color: #ffe6f0;
+    }
+
+    .btn{
+      background: white;
+      color: #ff2d55;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 30px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: 0.3s;
+      font-weight: 600;
+    }
+
+    .btn:hover{
+      transform: scale(1.05);
+      background: #ffe6f0;
+    }
+
+    .hidden-message{
+      display: none;
+      margin-top: 15px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #fff;
+      text-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+
+    .reasons{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .reason-box{
+      background: rgba(255,255,255,0.2);
+      padding: 15px;
+      border-radius: 18px;
+      font-size: 1rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      transition: 0.3s;
+    }
+
+    .reason-box:hover{
+      transform: translateY(-5px);
+    }
+
+    .countdown{
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-top: 10px;
+      color: #fff;
+    }
+
+    footer{
+      margin-top: 25px;
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+
+    /* floating hearts */
+    .heart{
+      position: fixed;
+      bottom: -20px;
+      font-size: 20px;
+      animation: floatUp 6s linear infinite;
+      opacity: 0.8;
+      z-index: 0;
+    }
+
+    @keyframes floatUp{
+      0%{ transform: translateY(0) scale(1); opacity: 1;}
+      100%{ transform: translateY(-110vh) scale(1.6); opacity: 0;}
+    }
+
+    /* music button */
+    .music-btn{
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(255,255,255,0.2);
+      border: 2px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 600;
+      z-index: 10;
+      transition: 0.3s;
+    }
+
+    .music-btn:hover{
+      background: rgba(255,255,255,0.35);
+      transform: scale(1.05);
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <button class="music-btn" onclick="toggleMusic()">🎵 Play Music</button>
+
+  <!-- Audio (Replace the link with your own mp3 if you want) -->
+  <audio id="bgMusic" loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
+  </audio>
+
+  <div class="container">
+
+    <h1>For My Shee ❤️</h1>
+    <h2>Happy Valentine’s Day, my love 🌹</h2>
+
+    <div class="card">
+      <h2>⏳ Countdown to Valentine’s</h2>
+      <div class="countdown" id="countdown"></div>
+    </div>
+
+    <div class="card">
+      <h2>💌 My Message to You</h2>
+
+      <p class="love-letter">
+        My Shee ❤️,<br><br>
+
+        Today is Valentine’s Day, and honestly… I wish I was right there with you.
+        I wish I could hold your hand, look you in the eyes, and tell you everything my heart feels.
+        <br><br>
+
+        I’m <span>really sorry</span> that I’m not there with you right now.
+        But even when I’m far, you are still the closest thing to my heart.
+        <br><br>
+
+        I want you to know something:  
+        <span>You are my favorite person in this world.</span>  
+        You make me feel loved, respected, understood, and motivated.
+        <br><br>
+
+        Every time I think about you, I smile.
+        Every time I remember your voice, your laughter, your heart… I just feel lucky.
+        <br><br>
+
+        Shee, I love you deeply.
+        I love your kindness.
+        I love your loyalty.
+        I love your beauty.
+        I love your soul.
+        <br><br>
+
+        Even though I’m not there today,
+        I promise you: <span>my heart is with you.</span>
+        <br><br>
+
+        Happy Valentine’s Day my baby 💗  
+        <br><br>
+        Forever yours, <br>
+        <span>Edwin ❤️</span>
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>🌸 Reasons I Love You</h2>
+
+      <div class="reasons">
+        <div class="reason-box">💗 You love God and your heart is pure.</div>
+        <div class="reason-box">🌷 You are loyal, genuine, and kind.</div>
+        <div class="reason-box">✨ You make me feel safe and valued.</div>
+        <div class="reason-box">🥰 Your smile makes my whole day better.</div>
+        <div class="reason-box">🎀 You’re sensitive and loving in the best way.</div>
+        <div class="reason-box">💍 You are not just my girl… you’re my future.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔐 A Secret Message Just For You</h2>
+      <button class="btn" onclick="revealMessage()">Click to Open 💝</button>
+      <p class="hidden-message" id="secretMessage">
+        Shee… if I could teleport right now, I would.  
+        I miss you so much 😭❤️  
+        I promise I’ll make it up to you with the sweetest date ever.  
+        You’re my baby forever 💗🌹
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>💞 One Promise</h2>
+      <p style="font-size: 1.1rem; line-height: 1.8;">
+        Even from far away…  
+        I will still choose you every day.  
+        I will still love you loudly.  
+        And I will still protect what we have. ❤️
+      </p>
+    </div>
+
+    <footer>
+      Made with love 💗 by Edwin, for Shee 🌹
+    </footer>
+
+  </div>
+
+  <script>
+    const countdownTarget = new Date(2026, 4, 3, 0, 0, 0);
+
+    // Countdown to the fixed birthday time (May 3rd, 1:00 AM)
+    function updateCountdown(){
+      const now = new Date();
+      const diff = countdownTarget - now;
+
+      if (diff <= 0) {
+        document.getElementById("countdown").innerHTML =
+          `0 days 0 hrs 0 min 0 sec 💘`;
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      document.getElementById("countdown").innerHTML =
+        `${days} days ${hours} hrs ${minutes} min ${seconds} sec 💘`;
+    }
+
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    // Reveal secret message
+    function revealMessage(){
+      document.getElementById("secretMessage").style.display = "block";
+    }
+
+    // Floating hearts
+    function createHeart(){
+      const heart = document.createElement("div");
+      heart.classList.add("heart");
+      heart.innerHTML = "💗";
+
+      heart.style.left = Math.random() * 100 + "vw";
+      heart.style.fontSize = (Math.random() * 20 + 15) + "px";
+      heart.style.animationDuration = (Math.random() * 3 + 4) + "s";
+
+      document.body.appendChild(heart);
+
+      setTimeout(() => {
+        heart.remove();
+      }, 6000);
+    }
+
+    setInterval(createHeart, 400);
+
+    // Music Toggle
+    let playing = false;
+    function toggleMusic(){
+      const music = document.getElementById("bgMusic");
+      const btn = document.querySelector(".music-btn");
+
+      if(!playing){
+        music.play();
+        btn.innerHTML = "⏸ Pause Music";
+        playing = true;
+      }else{
+        music.pause();
+        btn.innerHTML = "🎵 Play Music";
+        playing = false;
+      }
+    }
+  </script>
+
+</body>
+</html>

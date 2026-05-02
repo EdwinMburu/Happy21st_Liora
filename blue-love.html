@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Blue Love Animation</title>
+<style>
+body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+}
+canvas {
+    display: block;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+let W = 0;
+let H = 0;
+let cx = 0;
+let poolY = 0;
+let textY = 0;
+
+const TOTAL = 2600;
+const TEXT_SHARE = 0.34;
+const TEXT_COUNT = Math.floor(TOTAL * TEXT_SHARE);
+const particles = [];
+let lovePoints = [];
+let bdayPoints = [];
+let heartCloud = [];
+
+let phase = "poolIdle";
+let phaseStart = 0;
+let lastTs = 0;
+let showLoveText = false;
+let showBdayText = false;
+
+const DUR = {
+    poolIdle: 3200,
+    loveRise: 8200,
+    loveHold: 1800,
+    loveReturn: 4600,
+    bdayRise: 8200,
+    bdayHold: 1800,
+    bdayReturn: 4600,
+    heartRise: 8600,
+    heartRotate: 21000,
+    heartReturn: 5600,
+    bdayFinalReturn: 4200,
+    loveFinalReturn: 4200,
+    wormholeSink: 5200
+};
+
+class Particle {
+    constructor(i) {
+        this.i = i;
+        this.isText = i < TEXT_COUNT;
+        this.theta = Math.random() * Math.PI * 2;
+        this.baseR = Math.random();
+        this.twist = Math.random() * 0.6 + 0.75;
+        this.heartIndex = i;
+        this.delayText = Math.random() * 0.78;
+        this.delayHeart = Math.random() * 0.78;
+        this.swimAmpX = 8 + Math.random() * 20;
+        this.swimAmpY = 2 + Math.random() * 7;
+        this.swimSpeed = 0.7 + Math.random() * 1.2;
+        this.currentDrift = (Math.random() - 0.5) * 0.6;
+        this.trail = [];
+        this.trailLen = 8 + Math.floor(Math.random() * 5);
+        this.returning = false;
+        this.returnStartX = 0;
+        this.returnStartY = 0;
+        this.sinkStartX = 0;
+        this.sinkStartY = 0;
+        this.absorbed = false;
+        this.resetToPool(true);
+    }
+
+    resetToPool(hard = false) {
+        const p = randomPoolPoint();
+        this.homeX = p.x;
+        this.homeY = p.y;
+        if (hard) {
+            this.x = p.x;
+            this.y = p.y;
+            this.vx = 0;
+            this.vy = 0;
+        }
+        this.size = Math.random() * 1.5 + 0.65;
+        this.alpha = Math.random() * 0.35 + 0.55;
+        this.fallFade = 1;
+        this.returning = false;
+        this.sinkStartX = 0;
+        this.sinkStartY = 0;
+        this.absorbed = false;
+        this.trail.length = 0;
+    }
+
+    seek(targetX, targetY, force = 0.028) {
+        this.vx += (targetX - this.x) * force;
+        this.vy += (targetY - this.y) * force;
+    }
+
+    swim(ts) {
+        const t = ts * 0.0016 * this.swimSpeed;
+        const waveX = Math.sin(t + this.i * 0.17) * this.swimAmpX;
+        const waveX2 = Math.cos(t * 0.63 + this.i * 0.11) * (this.swimAmpX * 0.45);
+        const bobY = Math.cos(t * 1.85 + this.i * 0.09) * this.swimAmpY;
+        const current = Math.sin(t * 0.35 + this.i * 0.03) * this.currentDrift;
+
+        const tx = this.homeX + waveX + waveX2;
+        const ty = this.homeY + bobY;
+
+        this.vx += current;
+        this.seek(tx, ty, 0.05);
+
+        // Keep particles swimming in the bottom zone.
+        const minBottomY = poolY - H * 0.11;
+        if (this.y < minBottomY) {
+            this.vy += (minBottomY - this.y) * 0.015;
+        }
+    }
+
+    riseToPoint(progress, delay, target, arcStrength) {
+        if (progress <= delay) {
+            this.swim(lastTs);
+            return;
+        }
+        const local = Math.min(1, (progress - delay) / (1 - delay));
+        const upArc = Math.sin(local * Math.PI) * arcStrength;
+        const tx = this.homeX + (target.x - this.homeX) * local;
+        const ty = this.homeY + (target.y - this.homeY) * local - upArc;
+        this.seek(tx, ty, 0.052);
+    }
+
+    riseFromCenterStream(progress, delay, target) {
+        if (progress <= delay) {
+            this.swim(lastTs);
+            return;
+        }
+
+        const local = Math.min(1, (progress - delay) / (1 - delay));
+        const streamX = cx + Math.sin((this.i * 0.11) + local * 6.2) * (20 * (1 - local) + 4);
+        const streamY = poolY - (poolY - target.y) * local;
+
+        const blend = Math.max(0, (local - 0.62) / 0.38);
+        const tx = streamX + (target.x - streamX) * blend;
+        const ty = streamY + (target.y - streamY) * blend;
+
+        this.seek(tx, ty, 0.046);
+    }
+
+    returnToPoolFromCenter(progress, delay, source) {
+        if (progress <= delay) {
+            this.seek(source.x, source.y, 0.04);
+            return;
+        }
+
+        const local = Math.min(1, (progress - delay) / (1 - delay));
+        const streamX = cx + Math.sin((this.i * 0.11) + local * 6.2) * (20 * (1 - local) + 4);
+        const streamY = source.y + (poolY - source.y) * local;
+
+        const toStream = Math.min(1, local / 0.35);
+        const sx = source.x + (streamX - source.x) * toStream;
+        const sy = source.y + (streamY - source.y) * toStream;
+
+        const settle = Math.max(0, (local - 0.78) / 0.22);
+        const tx = sx + (this.homeX - sx) * settle;
+        const ty = sy + (this.homeY - sy) * settle;
+
+        this.seek(tx, ty, 0.048);
+    }
+
+    returnFromCurrentViaCenter(progress) {
+        if (!this.returning) {
+            this.returning = true;
+            this.returnStartX = this.x;
+            this.returnStartY = this.y;
+        }
+
+        const streamStage = Math.min(1, progress / 0.72);
+        const streamX = cx + Math.sin((this.i * 0.13) + progress * 8.2) * (18 * (1 - streamStage) + 3);
+        const streamY = this.returnStartY + (poolY - this.returnStartY) * streamStage;
+
+        const enter = Math.min(1, progress / 0.28);
+        const sx = this.returnStartX + (streamX - this.returnStartX) * enter;
+        const sy = this.returnStartY + (streamY - this.returnStartY) * enter;
+
+        const settle = Math.max(0, (progress - 0.72) / 0.28);
+        const tx = sx + (this.homeX - sx) * settle;
+        const ty = sy + (this.homeY - sy) * settle;
+
+        this.seek(tx, ty, 0.05);
+    }
+
+    dropFromSourceToBottomLine(progress, sourceX, sourceY, toWormhole = false) {
+        const local = Math.max(0, Math.min(1, progress));
+        const lineY = poolY - H * 0.012;
+        const holeX = cx;
+        const holeY = H * 0.92;
+
+        let tx = sourceX;
+        let ty = sourceY;
+
+        if (local <= 0.58) {
+            const p = local / 0.58;
+            tx = sourceX;
+            ty = sourceY + (lineY - sourceY) * p;
+        } else if (!toWormhole) {
+            const p = (local - 0.58) / 0.42;
+            tx = sourceX + (this.homeX - sourceX) * p;
+            ty = lineY + (this.homeY - lineY) * p;
+        } else if (local <= 0.88) {
+            const p = (local - 0.58) / 0.30;
+            tx = sourceX + (holeX - sourceX) * p;
+            ty = lineY;
+        } else {
+            const p = (local - 0.88) / 0.12;
+            tx = holeX;
+            ty = lineY + (holeY - lineY) * p;
+        }
+
+        this.seek(tx, ty, toWormhole ? 0.078 : 0.062);
+
+        if (toWormhole) {
+            this.fallFade = Math.max(0, 1 - local * 0.92);
+            const dist = Math.hypot(this.x - holeX, this.y - holeY);
+            if (dist < 5 && local > 0.9) {
+                this.absorbed = true;
+                this.fallFade = 0;
+                this.vx = 0;
+                this.vy = 0;
+                this.trail.length = 0;
+            }
+        }
+    }
+
+    dropFromCurrentToBottomLine(progress, toWormhole = false) {
+        if (!this.returning) {
+            this.returning = true;
+            this.returnStartX = this.x;
+            this.returnStartY = this.y;
+        }
+
+        this.dropFromSourceToBottomLine(progress, this.returnStartX, this.returnStartY, toWormhole);
+    }
+
+    sinkToWormhole(progress) {
+        this.dropFromCurrentToBottomLine(progress, true);
+    }
+
+    update(ts, dt) {
+        if (this.absorbed) {
+            return;
+        }
+
+        const t = ts - phaseStart;
+
+        if (phase === "poolIdle") {
+            this.swim(ts);
+        }
+
+        if (phase === "loveRise") {
+            if (this.isText && lovePoints.length) {
+                const progress = Math.min(1, t / DUR.loveRise);
+                const p = lovePoints[this.i % lovePoints.length];
+                this.riseFromCenterStream(progress, this.delayText, p);
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "loveHold") {
+            if (this.isText && lovePoints.length) {
+                const p = lovePoints[this.i % lovePoints.length];
+                this.seek(p.x, p.y, 0.04);
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "loveReturn") {
+            if (this.isText) {
+                const progress = Math.min(1, t / DUR.loveReturn);
+                const p = lovePoints[this.i % lovePoints.length];
+                const trigger = (1 - p.level) * 0.82;
+                if (progress > trigger) {
+                    const gone = (progress - trigger) / (1 - trigger);
+                    this.dropFromSourceToBottomLine(gone, p.x, p.y, false);
+                } else {
+                    this.seek(p.x, p.y, 0.04);
+                }
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "bdayRise") {
+            if (this.isText && bdayPoints.length) {
+                const progress = Math.min(1, t / DUR.bdayRise);
+                const p = bdayPoints[this.i % bdayPoints.length];
+                this.riseFromCenterStream(progress, this.delayText, p);
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "bdayHold") {
+            if (this.isText && bdayPoints.length) {
+                const p = bdayPoints[this.i % bdayPoints.length];
+                this.seek(p.x, p.y, 0.04);
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "bdayReturn") {
+            if (this.isText) {
+                const progress = Math.min(1, t / DUR.bdayReturn);
+                const p = bdayPoints[this.i % bdayPoints.length];
+                const trigger = (1 - p.level) * 0.82;
+                if (progress > trigger) {
+                    const gone = (progress - trigger) / (1 - trigger);
+                    this.dropFromSourceToBottomLine(gone, p.x, p.y, false);
+                } else {
+                    this.seek(p.x, p.y, 0.04);
+                }
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "heartRise") {
+            if (!this.isText && heartCloud.length) {
+                const progress = Math.min(1, t / DUR.heartRise);
+                const cloud = heartCloud[this.heartIndex % heartCloud.length];
+                const target = {
+                    x: cx + cloud.x * 0.43,
+                    y: H * 0.56 + cloud.y * 0.43
+                };
+                this.riseFromCenterStream(progress, this.delayHeart, target);
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "heartRotate") {
+            if (!this.isText) {
+                const turn = Math.min(1, t / DUR.heartRotate);
+                const angle = turn * (Math.PI * 6); // 3 full turns
+                const pt = heartCloud[this.heartIndex % heartCloud.length];
+
+                const cosY = Math.cos(angle);
+                const sinY = Math.sin(angle);
+                const x1 = pt.x * cosY + pt.z * sinY;
+                const z1 = -pt.x * sinY + pt.z * cosY;
+
+                const tilt = 0;
+                const cosX = Math.cos(tilt);
+                const sinX = Math.sin(tilt);
+                const y2 = pt.y * cosX - z1 * sinX;
+                const z2 = pt.y * sinX + z1 * cosX;
+
+                const fov = 420;
+                const depth = 760 + z2;
+                const persp = fov / Math.max(90, depth);
+
+                const tx = cx + x1 * persp;
+                const ty = H * 0.55 + y2 * persp;
+
+                this.seek(tx, ty, 0.058);
+                this.size = Math.max(0.6, 0.9 + persp * 2.2);
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "heartReturn") {
+            if (!this.isText) {
+                const progress = Math.min(1, t / DUR.heartReturn);
+                const pt = heartCloud[this.heartIndex % heartCloud.length];
+                const trigger = (1 - pt.level) * 0.82;
+                if (progress > trigger) {
+                    const gone = (progress - trigger) / (1 - trigger);
+                    this.dropFromCurrentToBottomLine(gone, false);
+                }
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "bdayFinalReturn") {
+            if (this.isText && bdayPoints.length) {
+                const progress = Math.min(1, t / DUR.bdayFinalReturn);
+                const p = bdayPoints[this.i % bdayPoints.length];
+                const trigger = (1 - p.level) * 0.82;
+                if (progress > trigger) {
+                    const gone = (progress - trigger) / (1 - trigger);
+                    this.sinkToWormhole(gone);
+                } else {
+                    this.seek(p.x, p.y, 0.04);
+                }
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "loveFinalReturn") {
+            if (this.isText && lovePoints.length) {
+                const progress = Math.min(1, t / DUR.loveFinalReturn);
+                const p = lovePoints[this.i % lovePoints.length];
+                const trigger = (1 - p.level) * 0.82;
+                if (progress > trigger) {
+                    const gone = (progress - trigger) / (1 - trigger);
+                    this.sinkToWormhole(gone);
+                } else {
+                    this.seek(p.x, p.y, 0.04);
+                }
+            } else {
+                this.swim(ts);
+            }
+        }
+
+        if (phase === "wormholeSink") {
+            const progress = Math.min(1, t / DUR.wormholeSink);
+            this.sinkToWormhole(progress);
+        }
+
+        if (phase === "poolFinal") {
+            this.swim(ts);
+        }
+
+        if (phase === "wormholeStay") {
+            // Keep absorbed particles hidden while wormhole remains.
+        }
+
+        this.vx *= 0.93;
+        this.vy *= 0.93;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > this.trailLen) {
+            this.trail.shift();
+        }
+    }
+
+    draw() {
+        if (this.absorbed) {
+            return;
+        }
+
+        if (this.trail.length > 1) {
+            for (let i = 1; i < this.trail.length; i++) {
+                const prev = this.trail[i - 1];
+                const curr = this.trail[i];
+                const t = i / this.trail.length;
+                const a = (this.alpha * (this.fallFade == null ? 1 : this.fallFade)) * t * 0.35;
+                ctx.strokeStyle = `rgba(0,145,255,${Math.max(0, a)})`;
+                ctx.lineWidth = Math.max(0.25, this.size * t * 0.7);
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(curr.x, curr.y);
+                ctx.stroke();
+            }
+        }
+
+        ctx.beginPath();
+        const a = this.alpha * (this.fallFade == null ? 1 : this.fallFade);
+        ctx.fillStyle = `rgba(0,145,255,${Math.max(0, a)})`;
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function randomPoolPoint() {
+    const spreadX = W * 0.56;
+    const spreadY = H * 0.07;
+    return {
+        x: cx - spreadX / 2 + Math.random() * spreadX,
+        y: poolY - spreadY / 2 + Math.random() * spreadY
+    };
+}
+
+function buildTextPoints(text, y, fontScale = 1) {
+    const temp = document.createElement("canvas");
+    const tctx = temp.getContext("2d");
+    temp.width = W;
+    temp.height = H;
+
+    const fontSize = Math.max(36, Math.min(96, W * 0.1 * fontScale));
+    tctx.clearRect(0, 0, W, H);
+    tctx.fillStyle = "#fff";
+    tctx.font = `600 ${fontSize}px Segoe Script, Comic Sans MS, cursive`;
+    tctx.textAlign = "center";
+    tctx.textBaseline = "middle";
+    tctx.fillText(text, cx, y);
+
+    const data = tctx.getImageData(0, 0, W, H).data;
+    const points = [];
+    const step = Math.max(2, Math.floor(W / 190));
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (let py = 0; py < H; py += step) {
+        for (let px = 0; px < W; px += step) {
+            if (data[(py * W + px) * 4 + 3] > 120) {
+                minY = Math.min(minY, py);
+                maxY = Math.max(maxY, py);
+                points.push({ x: px, y: py, level: 0 });
+            }
+        }
+    }
+
+    const span = Math.max(1, maxY - minY);
+    for (let i = 0; i < points.length; i++) {
+        points[i].level = (points[i].y - minY) / span;
+    }
+
+    return points;
+}
+
+function buildHeartCloud(count = TOTAL) {
+    const pts = [];
+    const s = Math.min(W, H) * 0.0212; // slightly bigger heart
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (let i = 0; i < count; i++) {
+        const t = Math.random() * Math.PI * 2;
+        const spread = Math.pow(Math.random(), 0.52);
+
+        const hx = 16 * Math.pow(Math.sin(t), 3);
+        const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+
+        const x = hx * s * spread;
+        const y = -hy * s * spread;
+        const zSpread = (1 - spread) * 0.75 + 0.2;
+        const z = (Math.random() * 2 - 1) * (s * 11) * zSpread;
+
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+
+        pts.push({ x, y, z, level: 0 });
+    }
+
+    const span = Math.max(1, maxY - minY);
+    for (let i = 0; i < pts.length; i++) {
+        pts[i].level = (pts[i].y - minY) / span;
+    }
+
+    return pts;
+}
+
+function drawGlowText(text, y, scale = 1, alpha = 1) {
+    const fontSize = Math.max(30, Math.min(96, W * 0.1 * scale));
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `600 ${fontSize}px Segoe Script, Comic Sans MS, cursive`;
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = "rgba(70,170,255,1)";
+    ctx.fillStyle = `rgba(115,200,255,${alpha})`;
+    ctx.fillText(text, cx, y);
+    ctx.restore();
+}
+
+function drawLoveRing(ts, alpha = 1) {
+    const centerX = cx;
+    const centerY = H * 0.56;
+    const ringRx = Math.min(W, H) * 0.33;
+    const ringRy = ringRx * 0.28;
+    const tilt = -0.24;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(tilt);
+
+    // Dotted ring body.
+    const dots = 170;
+    for (let i = 0; i < dots; i++) {
+        const a = (i / dots) * Math.PI * 2;
+        const tw = ts * 0.0006;
+        const x = Math.cos(a + tw) * ringRx;
+        const y = Math.sin(a + tw) * ringRy;
+        const pulse = 0.45 + 0.55 * Math.sin(a * 4 + ts * 0.004);
+        const dA = (0.22 + pulse * 0.45) * alpha;
+
+        ctx.fillStyle = `rgba(0,160,255,${dA})`;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.2 + pulse * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Comet heads + short tails circling the ring.
+    const comets = 6;
+    for (let c = 0; c < comets; c++) {
+        const headA = ts * (0.0011 + c * 0.00006) + c * (Math.PI * 2 / comets);
+        const hx = Math.cos(headA) * ringRx;
+        const hy = Math.sin(headA) * ringRy;
+
+        for (let t = 0; t < 9; t++) {
+            const ta = headA - t * 0.09;
+            const tx = Math.cos(ta) * ringRx;
+            const ty = Math.sin(ta) * ringRy;
+            const tailAlpha = (0.7 - t * 0.07) * alpha;
+            ctx.fillStyle = `rgba(0,180,255,${Math.max(0, tailAlpha)})`;
+            ctx.beginPath();
+            ctx.arc(tx, ty, Math.max(0.7, 2.4 - t * 0.22), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = `rgba(130,220,255,${0.95 * alpha})`;
+        ctx.beginPath();
+        ctx.arc(hx, hy, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+function drawWormhole(ts, alpha = 1) {
+    const holeX = cx;
+    const holeY = H * 0.92;
+    const spin = ts * 0.0034;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+
+    for (let i = 0; i < 5; i++) {
+        const radius = (W * 0.014) + i * (W * 0.009);
+        const wobble = Math.sin(spin * 1.3 + i * 1.5) * (W * 0.003);
+        ctx.strokeStyle = `rgba(0,160,255,${(0.32 - i * 0.05) * alpha})`;
+        ctx.lineWidth = Math.max(0.9, W * 0.0015 - i * 0.18);
+        ctx.beginPath();
+        ctx.ellipse(holeX, holeY, radius + wobble, H * (0.006 + i * 0.0028), 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    for (let i = 0; i < 38; i++) {
+        const a = spin + i * 0.47;
+        const r = (W * 0.008) + (i / 38) * (W * 0.055);
+        const x = holeX + Math.cos(a * 1.7) * r;
+        const y = holeY + Math.sin(a * 1.2) * r * 0.24;
+        const da = (0.3 + 0.5 * (1 - i / 38)) * alpha;
+        ctx.fillStyle = `rgba(0,180,255,${da})`;
+        ctx.beginPath();
+        ctx.arc(x, y, 0.9 + (1 - i / 38) * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    const core = ctx.createRadialGradient(holeX, holeY, 1, holeX, holeY, W * 0.045);
+    core.addColorStop(0, `rgba(120,215,255,${0.9 * alpha})`);
+    core.addColorStop(0.26, `rgba(45,130,255,${0.52 * alpha})`);
+    core.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.ellipse(holeX, holeY, W * 0.045, H * 0.015, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function enterPhase(name, ts) {
+    phase = name;
+    phaseStart = ts;
+
+    if (name === "loveReturn") {
+        showLoveText = true;
+    }
+
+    if (name === "bdayReturn") {
+        showBdayText = true;
+    }
+
+    if (name === "heartRotate") {
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].heartIndex = i % heartCloud.length;
+        }
+    }
+
+    if (name === "heartReturn") {
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].returning = false;
+        }
+    }
+
+    if (name === "bdayFinalReturn") {
+        showBdayText = false;
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].returning = false;
+        }
+    }
+
+    if (name === "loveFinalReturn") {
+        showLoveText = false;
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].returning = false;
+        }
+    }
+
+    if (name === "wormholeSink") {
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].returning = false;
+        }
+    }
+
+    if (name === "poolFinal") {
+        showBdayText = false;
+        showLoveText = false;
+    }
+}
+
+function nextPhase(ts) {
+    if (phase === "poolIdle") return enterPhase("loveRise", ts);
+    if (phase === "loveRise") return enterPhase("loveHold", ts);
+    if (phase === "loveHold") return enterPhase("loveReturn", ts);
+    if (phase === "loveReturn") return enterPhase("bdayRise", ts);
+    if (phase === "bdayRise") return enterPhase("bdayHold", ts);
+    if (phase === "bdayHold") return enterPhase("bdayReturn", ts);
+    if (phase === "bdayReturn") return enterPhase("heartRise", ts);
+    if (phase === "heartRise") return enterPhase("heartRotate", ts);
+    if (phase === "heartRotate") return enterPhase("heartReturn", ts);
+    if (phase === "heartReturn") return enterPhase("bdayFinalReturn", ts);
+    if (phase === "bdayFinalReturn") {
+        return enterPhase("loveFinalReturn", ts);
+    }
+    if (phase === "loveFinalReturn") {
+        return enterPhase("wormholeSink", ts);
+    }
+    if (phase === "wormholeSink") {
+        return enterPhase("wormholeStay", ts);
+    }
+}
+
+function initScene() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    cx = W * 0.5;
+    poolY = H * 0.86;
+    textY = H * 0.2;
+
+    lovePoints = buildTextPoints("I Love You", textY, 1);
+    bdayPoints = buildTextPoints("Happy Birthday Shee", textY + Math.max(54, H * 0.09), 0.72);
+    heartCloud = buildHeartCloud(TOTAL);
+
+    particles.length = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        particles.push(new Particle(i));
+    }
+
+    phase = "poolIdle";
+    phaseStart = performance.now();
+    lastTs = phaseStart;
+    showLoveText = false;
+    showBdayText = false;
+}
+
+function animate(ts) {
+    const dt = Math.min(32, ts - lastTs || 16);
+    lastTs = ts;
+
+    const elapsed = ts - phaseStart;
+    if (DUR[phase] && elapsed >= DUR[phase]) {
+        nextPhase(ts);
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    let activeCount = 0;
+    for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.update(ts, dt);
+        if (!p.absorbed) activeCount++;
+        p.draw();
+    }
+    ctx.restore();
+
+    if (showLoveText) {
+        drawGlowText("I Love You", textY, 1, 0.96);
+    }
+
+    if (showBdayText) {
+        drawGlowText("Happy Birthday Shee", textY + Math.max(54, H * 0.09), 0.72, 0.95);
+    }
+
+    if (phase === "heartRise" || phase === "heartRotate" || phase === "heartReturn") {
+        drawLoveRing(ts, 0.92);
+    }
+
+    if (phase === "bdayFinalReturn" || phase === "loveFinalReturn" || phase === "wormholeSink" || phase === "wormholeStay") {
+        drawWormhole(ts, 0.96);
+    }
+
+    requestAnimationFrame(animate);
+}
+
+window.addEventListener("resize", initScene);
+
+initScene();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
